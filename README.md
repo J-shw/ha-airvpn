@@ -3,7 +3,7 @@ View your [AirVPN](https://airvpn.org/) stats in Home Assistant
 
 This custom integration allows you to view your AirVPN user and session statistics directly in Home Assistant. It polls the AirVPN API every 10 minutes (600 seconds) to provide up-to-date information on your account and active VPN sessions.
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?repository=https%3A%2F%2Fgithub.com%2FJ-shw%2Fha-airvpn&category=Integration&owner=J-shw)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=J-shw&repository=ha-airvpn&category=Integration)
 
 ### Features
 
