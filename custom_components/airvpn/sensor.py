@@ -3,6 +3,7 @@ import asyncio
 import aiohttp
 from datetime import timedelta
 from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -44,10 +45,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
     sensors = [
         AirVPNUserSensor(coordinator, "Expiration Days", "expiration_days", "days", "mdi:calendar-end"),
         AirVPNUserSensor(coordinator, "Last Activity", "last_activity_date", icon="mdi:clock-end"),
-        AirVPNUserSensor(coordinator, "Connected", "connected", icon="mdi:vpn"),
         AirVPNUserSensor(coordinator, "Username", "login", icon="mdi:account"),
-        AirVPNUserSensor(coordinator, "Premium", "premium", icon="mdi:crown"),
         AirVPNUserSensor(coordinator, "Credits", "credits", icon="mdi:bitcoin"),
+        AirVPNUserBinarySensor(coordinator, "Connected", "connected", icon="mdi:vpn"),
+        AirVPNUserBinarySensor(coordinator, "Premium", "premium", icon="mdi:crown"),
     ]
 
     async_add_entities(sensors, True)
@@ -67,6 +68,28 @@ class AirVPNUserSensor(SensorEntity):
 
     @property
     def state(self):
+        user_data = self.coordinator.data.get('user', {})
+        return user_data.get(self._key)
+
+    async def async_added_to_hass(self):
+        self.async_on_remove(
+            self.coordinator.async_add_listener(self.async_write_ha_state)
+        )
+
+class AirVPNUserBinarySensor(BinarySensorEntity):
+    def __init__(self, coordinator, name, key, icon=None):
+        self._name = name
+        self.coordinator = coordinator
+        self._key = key
+        self._attr_unique_id = f"airvpn_user_{key}"
+        self._attr_icon = icon
+
+    @property
+    def name(self):
+        return f"AirVPN {self._name}"
+
+    @property
+    def is_on(self):
         user_data = self.coordinator.data.get('user', {})
         return user_data.get(self._key)
 
