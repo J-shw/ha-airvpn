@@ -42,9 +42,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
     
     await coordinator.async_refresh()
 
-    async_add_entities([MyCustomSensor(coordinator, "AirVPN Expiration Days")], True)
+    async_add_entities([AirVPNSensor(coordinator, "AirVPN Expiration Days")], True)
 
-class MyCustomSensor(SensorEntity):
+class AirVPNSensor(SensorEntity):
     def __init__(self, coordinator, name):
         self._name = name
         self.coordinator = coordinator
