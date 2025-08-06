@@ -91,22 +91,19 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
         
         session = sessions_by_name.get(device_name)
         if session:
-            device_name = session.get('device_name')
-            session_id = device_name
-            if session_id:
-                session_sensors.extend([
-                    AirVPNSessionSensor(coordinator, session, "Server Name", "server_name", "mdi:server-network", session_id, device_name=device_name),
-                    AirVPNSessionSensor(coordinator, session, "VPN IP", "vpn_ip", "mdi:ip-network", session_id, device_name=device_name),
-                    AirVPNSessionSensor(coordinator, session, "Entry IP", "entry_ip", "mdi:ip-network-outline", session_id, device_name=device_name),
-                    AirVPNSessionSensor(coordinator, session, "Exit IP", "exit_ip", "mdi:ip-network-outline", session_id, device_name=device_name),
-                    AirVPNSessionSensor(coordinator, session, "Server Country", "server_country", "mdi:earth", session_id, device_name=device_name),
-                    AirVPNSessionSensor(coordinator, session, "Connected Since", "connected_since_date", "mdi:clock-start", session_id, device_name=device_name),
-                    AirVPNSessionSensor(coordinator, session, "Bytes Read", "bytes_read", "mdi:download", session_id, unit="bytes", device_class=SensorDeviceClass.DATA_SIZE, device_name=device_name),
-                    AirVPNSessionSensor(coordinator, session, "Bytes Written", "bytes_write", "mdi:upload", session_id, unit="bytes", device_class=SensorDeviceClass.DATA_SIZE, device_name=device_name),
-                    AirVPNSessionSensor(coordinator, session, "Read Speed", "speed_read", "mdi:download-network", session_id, unit="B/s", device_class=SensorDeviceClass.DATA_RATE, device_name=device_name),
-                    AirVPNSessionSensor(coordinator, session, "Write Speed", "speed_write", "mdi:upload-network", session_id, unit="B/s", device_class=SensorDeviceClass.DATA_RATE, device_name=device_name),
-                    AirVPNSessionSensor(coordinator, session, "Server Bandwidth", "server_bw", "mdi:chart-bell-curve", session_id, unit="Mbit/s", device_class=SensorDeviceClass.DATA_RATE, state_class=SensorStateClass.MEASUREMENT, device_name=device_name),
-                ])
+            session_sensors.extend([
+                AirVPNSessionSensor(coordinator, session, "Server Name", "server_name", "mdi:server-network", device_id, device_name=device_name),
+                AirVPNSessionSensor(coordinator, session, "VPN IP", "vpn_ip", "mdi:ip-network", device_id, device_name=device_name),
+                AirVPNSessionSensor(coordinator, session, "Entry IP", "entry_ip", "mdi:ip-network-outline", device_id, device_name=device_name),
+                AirVPNSessionSensor(coordinator, session, "Exit IP", "exit_ip", "mdi:ip-network-outline", device_id, device_name=device_name),
+                AirVPNSessionSensor(coordinator, session, "Server Country", "server_country", "mdi:earth", device_id, device_name=device_name),
+                AirVPNSessionSensor(coordinator, session, "Connected Since", "connected_since_date", "mdi:clock-start", device_id, device_name=device_name),
+                AirVPNSessionSensor(coordinator, session, "Bytes Read", "bytes_read", "mdi:download", device_id, unit="bytes", device_class=SensorDeviceClass.DATA_SIZE, device_name=device_name),
+                AirVPNSessionSensor(coordinator, session, "Bytes Written", "bytes_write", "mdi:upload", device_id, unit="bytes", device_class=SensorDeviceClass.DATA_SIZE, device_name=device_name),
+                AirVPNSessionSensor(coordinator, session, "Read Speed", "speed_read", "mdi:download-network", device_id, unit="B/s", device_class=SensorDeviceClass.DATA_RATE, device_name=device_name),
+                AirVPNSessionSensor(coordinator, session, "Write Speed", "speed_write", "mdi:upload-network", device_id, unit="B/s", device_class=SensorDeviceClass.DATA_RATE, device_name=device_name),
+                AirVPNSessionSensor(coordinator, session, "Server Bandwidth", "server_bw", "mdi:chart-bell-curve", device_id, unit="Mbit/s", device_class=SensorDeviceClass.DATA_RATE, state_class=SensorStateClass.MEASUREMENT, device_name=device_name),
+            ])
 
     async_add_entities(user_sensors, True)
     async_add_entities(user_binary_sensors, True)
