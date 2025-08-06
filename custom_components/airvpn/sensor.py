@@ -1,4 +1,3 @@
-"""Platform for <your_integration_name> sensor."""
 import logging
 import asyncio
 import aiohttp
