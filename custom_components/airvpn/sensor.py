@@ -20,15 +20,25 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
 
     api_key = hass.data[DOMAIN][CONF_API_KEY]
 
-    api_endpoint = f"https://airvpn.org/api/userinfo/?key={api_key}"
+    api_endpoint_userinfo  = f"https://airvpn.org/api/userinfo/?key={api_key}"
+    api_endpoint_devices = f"https://airvpn.org/api/devices/?key={api_key}"
     
     async def async_update_data():
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(api_endpoint) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    return data
+                userinfo_response = await session.get(api_endpoint_userinfo)
+                devices_response = await session.get(api_endpoint_devices)
+
+                userinfo_response.raise_for_status()
+                devices_response.raise_for_status()
+
+                userinfo_data = await userinfo_response.json()
+                devices_data = await devices_response.json()
+                
+                # Combine both API responses into a single dictionary
+                data = userinfo_data
+                data["devices"] = devices_data["devices"] if "devices" in devices_data and devices_data["devices"] else []
+                return data
         except Exception as err:
             raise UpdateFailed(f"Error fetching data: {err}")
 
