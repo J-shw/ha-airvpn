@@ -1,4 +1,4 @@
-# ha-airvpn
+# <img src="images/airVPN_icon.png" alt="AirVPN App Icon" width="100"> ha-airvpn
 View your [AirVPN](https://airvpn.org/) stats in Home Assistant
 
 This custom integration allows you to view your AirVPN user and session statistics directly in Home Assistant. It polls the AirVPN API every 10 minutes (600 seconds) to provide up-to-date information on your account and active VPN sessions.
