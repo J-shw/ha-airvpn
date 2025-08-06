@@ -42,17 +42,25 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
     
     await coordinator.async_refresh()
 
-    sensors = [
-        AirVPNUserSensor(coordinator, "Expiration Days", "expiration_days", "days", "mdi:calendar-end", SensorDeviceClass.DURATION, SensorStateClass.MEASUREMENT),
-        AirVPNUserSensor(coordinator, "Last Activity", "last_activity_date", icon="mdi:clock-end"),
-        AirVPNUserSensor(coordinator, "Username", "login", icon="mdi:account"),
-        AirVPNUserSensor(coordinator, "Credits", "credits", icon="mdi:bitcoin", device_class=SensorDeviceClass.MONETARY, state_class=SensorStateClass.MEASUREMENT),
-    ]
+    user_data = coordinator.data.get('user', {})
+    username = user_data.get('login')
+    user_device_id = username.lower() if username else None
 
-    binary_sensors = [
-        AirVPNUserBinarySensor(coordinator, "Connected", "connected", icon="mdi:vpn"),
-        AirVPNUserBinarySensor(coordinator, "Premium", "premium", icon="mdi:crown"),
-    ]
+    user_sensors = []
+    user_binary_sensors = []
+
+    if user_device_id:
+        user_sensors = [
+            AirVPNUserSensor(coordinator, "Expiration Days", "expiration_days", user_device_id, username, "days", "mdi:calendar-end", SensorDeviceClass.DURATION, SensorStateClass.MEASUREMENT),
+            AirVPNUserSensor(coordinator, "Credits", "credits", user_device_id, username, icon="mdi:bitcoin", device_class=SensorDeviceClass.MONETARY, state_class=SensorStateClass.MEASUREMENT),
+            AirVPNUserSensor(coordinator, "Last Activity", "last_activity_date", user_device_id, username, icon="mdi:clock-end"),
+            AirVPNUserSensor(coordinator, "Username", "login", user_device_id, username, icon="mdi:account"),
+        ]
+        
+        user_binary_sensors = [
+            AirVPNUserBinarySensor(coordinator, "Connected", "connected", user_device_id, username, icon="mdi:vpn"),
+            AirVPNUserBinarySensor(coordinator, "Premium", "premium", user_device_id, username, icon="mdi:crown"),
+        ]
 
     session_sensors = []
     sessions_data = coordinator.data.get('sessions', [])
@@ -72,12 +80,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
             session_sensors.append(AirVPNSessionSensor(coordinator, session, "Write Speed", "speed_write", "mdi:upload-network", session_id, unit="B/s", device_class=SensorDeviceClass.DATA_RATE, device_name=device_name))
             session_sensors.append(AirVPNSessionSensor(coordinator, session, "Server Bandwidth", "server_bw", "mdi:chart-bell-curve", session_id, unit="Mbit/s", device_class=SensorDeviceClass.DATA_RATE, state_class=SensorStateClass.MEASUREMENT, device_name=device_name))
 
-    async_add_entities(sensors, True)
-    async_add_entities(binary_sensors, True)
+    async_add_entities(user_sensors, True)
+    async_add_entities(user_binary_sensors, True)
     async_add_entities(session_sensors, True)
 
 class AirVPNUserSensor(SensorEntity):
-    def __init__(self, coordinator, name, key, unit=None, icon=None, device_class=None, state_class=None):
+    def __init__(self, coordinator, name, key, device_id, device_name, unit=None, icon=None, device_class=None, state_class=None):
         self._name = name
         self.coordinator = coordinator
         self._key = key
@@ -87,12 +95,19 @@ class AirVPNUserSensor(SensorEntity):
         self._attr_device_class = device_class
         self._attr_state_class = state_class
 
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, device_id)},
+            "name": f"AirVPN User ({device_name})",
+            "manufacturer": "AirVPN",
+        }
+
     @property
     def name(self):
         return f"AirVPN {self._name}"
-
+    
     @property
     def state(self):
+        """Return the state of the sensor."""
         user_data = self.coordinator.data.get('user', {})
         return user_data.get(self._key)
 
@@ -102,12 +117,18 @@ class AirVPNUserSensor(SensorEntity):
         )
 
 class AirVPNUserBinarySensor(BinarySensorEntity):
-    def __init__(self, coordinator, name, key, icon=None):
+    def __init__(self, coordinator, name, key, device_id, device_name, icon=None):
         self._name = name
         self.coordinator = coordinator
         self._key = key
         self._attr_unique_id = f"airvpn_user_{key}"
         self._attr_icon = icon
+        
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, device_id)},
+            "name": f"AirVPN User ({device_name})",
+            "manufacturer": "AirVPN",
+        }
 
     @property
     def name(self):
@@ -115,6 +136,7 @@ class AirVPNUserBinarySensor(BinarySensorEntity):
 
     @property
     def is_on(self):
+        """Return true if the binary sensor is on."""
         user_data = self.coordinator.data.get('user', {})
         return user_data.get(self._key)
 
@@ -133,9 +155,8 @@ class AirVPNSessionSensor(SensorEntity):
         self._attr_unit_of_measurement = unit
         self._attr_icon = icon
         self._attr_device_class = device_class
-        self._attr_state_class = state_class # Add this line
+        self._attr_state_class = state_class
         
-        # Set the device information using the device_name from the JSON
         self._attr_device_info = {
             "identifiers": {(DOMAIN, device_id)},
             "name": f"AirVPN Session ({device_name})",
