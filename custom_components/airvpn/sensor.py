@@ -35,29 +35,40 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
     coordinator = DataUpdateCoordinator(
         hass,
         _LOGGER,
-        name="airvpn_sensor",
+        name="airvpn_coordinator",
         update_method=async_update_data,
         update_interval=SCAN_INTERVAL,
     )
     
     await coordinator.async_refresh()
 
-    async_add_entities([AirVPNSensor(coordinator, "AirVPN Expiration Days")], True)
+    sensors = [
+        AirVPNUserSensor(coordinator, "Expiration Days", "expiration_days", "days"),
+        AirVPNUserSensor(coordinator, "Last Activity", "last_activity_date"),
+        AirVPNUserSensor(coordinator, "Connected", "connected"),
+        AirVPNUserSensor(coordinator, "Username", "login"),
+        AirVPNUserSensor(coordinator, "Premium", "premium"),
+        AirVPNUserSensor(coordinator, "Credits", "credits"),
+    ]
 
-class AirVPNSensor(SensorEntity):
-    def __init__(self, coordinator, name):
+    async_add_entities(sensors, True)
+
+class AirVPNUserSensor(SensorEntity):
+    def __init__(self, coordinator, name, key, unit=None):
         self._name = name
         self.coordinator = coordinator
-        self._state = None
-        self._attr_unique_id = f"airvpn_{name}"
+        self._key = key
+        self._attr_unique_id = f"airvpn_user_{key}"
+        self._attr_unit_of_measurement = unit
 
     @property
     def name(self):
-        return self._name
+        return f"AirVPN {self._name}"
 
     @property
     def state(self):
-        return self.coordinator.data.get('user', {}).get('expiration_days')
+        user_data = self.coordinator.data.get('user', {})
+        return user_data.get(self._key)
 
     async def async_added_to_hass(self):
         self.async_on_remove(
