@@ -1,0 +1,12 @@
+{
+  "domain": "airvpn",
+  "name": "AirVPN",
+  "codeowners": ["@J-shw"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/J-shw/ha-airvpn",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/J-shw/ha-airvpn/issues",
+  "requirements": [],
+  "version": "1.0.0"
+}
