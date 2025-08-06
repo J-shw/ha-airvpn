@@ -86,7 +86,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
             AirVPNDeviceSensor(coordinator, device_info, "Status", "status", "mdi:network-outline", device_id, device_name),
             AirVPNDeviceSensor(coordinator, device_info, "Last Attempt Date", "vpn_attempt_date", "mdi:calendar-check", device_id, device_name),
             AirVPNDeviceSensor(coordinator, device_info, "VPN Last From", "vpn_last_from_date", "mdi:vpn", device_id, device_name),
-            AirVPNDeviceSensor(coordinator, device_info, "VPN Last To", "vpn_last_to_date", "mdi:vpn-off", device_id, device_name),
+            AirVPNDeviceSensor(coordinator, device_info, "VPN Last To", "vpn_last_to_date", "mdi:vpn", device_id, device_name),
         ])
         
         session = sessions_by_name.get(device_name)
@@ -217,8 +217,6 @@ class AirVPNSessionSensor(SensorEntity):
         
         self._attr_device_info = {
             "identifiers": {(DOMAIN, device_id)},
-            "name": f"AirVPN Session ({device_name})",
-            "manufacturer": "AirVPN",
         }
 
     @property
