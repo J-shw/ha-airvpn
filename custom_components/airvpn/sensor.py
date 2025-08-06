@@ -10,13 +10,17 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
+from .const import DOMAIN, CONF_API_KEY
+
 _LOGGER = logging.getLogger(__name__)
 
-# Polling frequency set to 600 seconds
 SCAN_INTERVAL = timedelta(seconds=600)
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, async_add_entities):
-    api_endpoint = "https://airvpn.org/api/userinfo/?key={api_key}"
+
+    api_key = hass.data[DOMAIN][CONF_API_KEY]
+
+    api_endpoint = f"https://airvpn.org/api/userinfo/?key={api_key}"
     
     async def async_update_data():
         try:
