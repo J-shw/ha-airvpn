@@ -2,7 +2,7 @@ import logging
 import asyncio
 import aiohttp
 from datetime import timedelta
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorEntity, SensorDeviceClass, SensorStateClass
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.helpers.entity import Entity
@@ -43,24 +43,30 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
     await coordinator.async_refresh()
 
     sensors = [
-        AirVPNUserSensor(coordinator, "Expiration Days", "expiration_days", "days", "mdi:calendar-end"),
+        AirVPNUserSensor(coordinator, "Expiration Days", "expiration_days", "days", "mdi:calendar-end", SensorDeviceClass.DURATION, SensorStateClass.MEASUREMENT),
         AirVPNUserSensor(coordinator, "Last Activity", "last_activity_date", icon="mdi:clock-end"),
         AirVPNUserSensor(coordinator, "Username", "login", icon="mdi:account"),
-        AirVPNUserSensor(coordinator, "Credits", "credits", icon="mdi:bitcoin"),
+        AirVPNUserSensor(coordinator, "Credits", "credits", icon="mdi:bitcoin", device_class=SensorDeviceClass.MONETARY, state_class=SensorStateClass.MEASUREMENT),
+    ]
+
+    binary_sensors = [
         AirVPNUserBinarySensor(coordinator, "Connected", "connected", icon="mdi:vpn"),
         AirVPNUserBinarySensor(coordinator, "Premium", "premium", icon="mdi:crown"),
     ]
 
     async_add_entities(sensors, True)
+    async_add_entities(binary_sensors, True)
 
 class AirVPNUserSensor(SensorEntity):
-    def __init__(self, coordinator, name, key, unit=None, icon=None):
+    def __init__(self, coordinator, name, key, unit=None, icon=None, device_class=None, state_class=None):
         self._name = name
         self.coordinator = coordinator
         self._key = key
         self._attr_unique_id = f"airvpn_user_{key}"
         self._attr_unit_of_measurement = unit
         self._attr_icon = icon
+        self._attr_device_class = device_class
+        self._attr_state_class = state_class
 
     @property
     def name(self):
