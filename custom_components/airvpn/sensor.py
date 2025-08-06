@@ -42,23 +42,24 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
     await coordinator.async_refresh()
 
     sensors = [
-        AirVPNUserSensor(coordinator, "Expiration Days", "expiration_days", "days"),
-        AirVPNUserSensor(coordinator, "Last Activity", "last_activity_date"),
-        AirVPNUserSensor(coordinator, "Connected", "connected"),
-        AirVPNUserSensor(coordinator, "Username", "login"),
-        AirVPNUserSensor(coordinator, "Premium", "premium"),
-        AirVPNUserSensor(coordinator, "Credits", "credits"),
+        AirVPNUserSensor(coordinator, "Expiration Days", "expiration_days", "days", "mdi:calendar-end"),
+        AirVPNUserSensor(coordinator, "Last Activity", "last_activity_date", icon="mdi:clock-end"),
+        AirVPNUserSensor(coordinator, "Connected", "connected", icon="mdi:vpn"),
+        AirVPNUserSensor(coordinator, "Username", "login", icon="mdi:account"),
+        AirVPNUserSensor(coordinator, "Premium", "premium", icon="mdi:crown"),
+        AirVPNUserSensor(coordinator, "Credits", "credits", icon="mdi:bitcoin"),
     ]
 
     async_add_entities(sensors, True)
 
 class AirVPNUserSensor(SensorEntity):
-    def __init__(self, coordinator, name, key, unit=None):
+    def __init__(self, coordinator, name, key, unit=None, icon=None):
         self._name = name
         self.coordinator = coordinator
         self._key = key
         self._attr_unique_id = f"airvpn_user_{key}"
         self._attr_unit_of_measurement = unit
+        self._attr_icon = icon
 
     @property
     def name(self):
