@@ -6,7 +6,7 @@ from homeassistant.components.sensor import SensorEntity, SensorDeviceClass, Sen
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed, CoordinatorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
@@ -14,7 +14,7 @@ from .const import DOMAIN, CONF_API_KEY
 
 _LOGGER = logging.getLogger(__name__)
 
-SCAN_INTERVAL = timedelta(seconds=600)
+SCAN_INTERVAL = timedelta(seconds=300)
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, async_add_entities):
 
@@ -92,17 +92,17 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
         session = sessions_by_name.get(device_name)
         if session:
             session_sensors.extend([
-                AirVPNSessionSensor(coordinator, session, "Server Name", "server_name", "mdi:server-network", device_id, device_name=device_name),
-                AirVPNSessionSensor(coordinator, session, "VPN IP", "vpn_ip", "mdi:ip-network", device_id, device_name=device_name),
-                AirVPNSessionSensor(coordinator, session, "Entry IP", "entry_ip", "mdi:ip-network-outline", device_id, device_name=device_name),
-                AirVPNSessionSensor(coordinator, session, "Exit IP", "exit_ip", "mdi:ip-network-outline", device_id, device_name=device_name),
-                AirVPNSessionSensor(coordinator, session, "Server Country", "server_country", "mdi:earth", device_id, device_name=device_name),
-                AirVPNSessionSensor(coordinator, session, "Connected Since", "connected_since_date", "mdi:clock-start", device_id, device_name=device_name),
-                AirVPNSessionSensor(coordinator, session, "Bytes Read", "bytes_read", "mdi:download", device_id, unit="bytes", device_class=SensorDeviceClass.DATA_SIZE, device_name=device_name),
-                AirVPNSessionSensor(coordinator, session, "Bytes Written", "bytes_write", "mdi:upload", device_id, unit="bytes", device_class=SensorDeviceClass.DATA_SIZE, device_name=device_name),
-                AirVPNSessionSensor(coordinator, session, "Read Speed", "speed_read", "mdi:download-network", device_id, unit="B/s", device_class=SensorDeviceClass.DATA_RATE, device_name=device_name),
-                AirVPNSessionSensor(coordinator, session, "Write Speed", "speed_write", "mdi:upload-network", device_id, unit="B/s", device_class=SensorDeviceClass.DATA_RATE, device_name=device_name),
-                AirVPNSessionSensor(coordinator, session, "Server Bandwidth", "server_bw", "mdi:chart-bell-curve", device_id, unit="Mbit/s", device_class=SensorDeviceClass.DATA_RATE, state_class=SensorStateClass.MEASUREMENT, device_name=device_name),
+                AirVPNSessionSensor(coordinator, device_id, device_name, "server_name", "Server Name", None, "mdi:server-network"),
+                AirVPNSessionSensor(coordinator, device_id, device_name, "vpn_ip", "VPN IP", None, "mdi:ip-network"),
+                AirVPNSessionSensor(coordinator, device_id, device_name, "entry_ip", "Entry IP", None, "mdi:ip-network-outline"),
+                AirVPNSessionSensor(coordinator, device_id, device_name, "exit_ip", "Exit IP", None, "mdi:ip-network-outline"),
+                AirVPNSessionSensor(coordinator, device_id, device_name, "server_country", "Server Country", None, "mdi:earth"),
+                AirVPNSessionSensor(coordinator, device_id, device_name, "connected_since_date", "Connected Since", None, "mdi:clock-start"),
+                AirVPNSessionSensor(coordinator, device_id, device_name, "bytes_read", "Data Downloaded", "bytes", "mdi:download", device_class=SensorDeviceClass.DATA_SIZE),
+                AirVPNSessionSensor(coordinator, device_id, device_name, "bytes_write", "Data Uploaded", "bytes", "mdi:upload", device_class=SensorDeviceClass.DATA_SIZE),
+                AirVPNSessionSensor(coordinator, device_id, device_name, "speed_read", "Download Speed", "B/s", "mdi:download-network", device_class=SensorDeviceClass.DATA_RATE),
+                AirVPNSessionSensor(coordinator, device_id, device_name, "speed_write", "Upload Speed", "B/s", "mdi:upload-network", device_class=SensorDeviceClass.DATA_RATE),
+                AirVPNSessionSensor(coordinator, device_id, device_name, "server_bw", "Server Bandwidth", "Mbit/s", "mdi:chart-bell-curve", device_class=SensorDeviceClass.DATA_RATE),
             ])
 
     async_add_entities(user_sensors, True)
@@ -110,10 +110,41 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
     async_add_entities(device_sensors, True)
     async_add_entities(session_sensors, True)
 
-class AirVPNUserSensor(SensorEntity):
+# -- Base classes --
+
+class AirVPNBaseEntity(CoordinatorEntity):
+    def __init__(self, coordinator, device_id, entity_key, name_suffix, icon, device_name_prefix):
+        super().__init__(coordinator)
+        
+        self._entity_key = entity_key
+
+        self._attr_unique_id = f"{device_id}_{entity_key}"
+        self._attr_name = f"{device_name_prefix} {name_suffix}"
+        self._attr_icon = icon
+        
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, device_id)},
+            "name": device_name_prefix,
+            "manufacturer": "AirVPN",
+        }
+
+class AirVPNBaseSensor(AirVPNBaseEntity, SensorEntity):    
+    def __init__(self, coordinator, device_id, entity_key, name_suffix, unit, icon, device_name_prefix="AirVPN", device_class=None):
+        super().__init__(coordinator, device_id, entity_key, name_suffix, icon, device_name_prefix)
+        self._attr_unit_of_measurement = unit
+        self._attr_device_class = device_class
+        self._attr_state_class = SensorStateClass.MEASUREMENT
+        
+    @property
+    def state(self):
+        data = self._get_data()
+        return data.get(self._entity_key) if data else None
+
+
+class AirVPNUserSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator, name, key, device_id, device_name, unit=None, icon=None, device_class=None, state_class=None):
+        super().__init__(coordinator)
         self._name = name
-        self.coordinator = coordinator
         self._key = key
         self._attr_unique_id = f"airvpn_user_{key}"
         self._attr_unit_of_measurement = unit
@@ -142,10 +173,10 @@ class AirVPNUserSensor(SensorEntity):
             self.coordinator.async_add_listener(self.async_write_ha_state)
         )
 
-class AirVPNUserBinarySensor(BinarySensorEntity):
+class AirVPNUserBinarySensor(CoordinatorEntity, BinarySensorEntity):
     def __init__(self, coordinator, name, key, device_id, device_name, icon=None):
+        super().__init__(coordinator)
         self._name = name
-        self.coordinator = coordinator
         self._key = key
         self._attr_unique_id = f"airvpn_user_{key}"
         self._attr_icon = icon
@@ -171,9 +202,9 @@ class AirVPNUserBinarySensor(BinarySensorEntity):
             self.coordinator.async_add_listener(self.async_write_ha_state)
         )
 
-class AirVPNDeviceSensor(SensorEntity):
+class AirVPNDeviceSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator, device_data, name, key, icon, device_id, device_name, unit=None, device_class=None, state_class=None):
-        self.coordinator = coordinator
+        super().__init__(coordinator)
         self._device_data = device_data
         self._name = name
         self._key = key
@@ -203,32 +234,13 @@ class AirVPNDeviceSensor(SensorEntity):
             self.coordinator.async_add_listener(self.async_write_ha_state)
         )
 
-class AirVPNSessionSensor(SensorEntity):
-    def __init__(self, coordinator, session_data, name, key, icon, device_id, unit=None, device_class=None, device_name=None, state_class=None):
-        self.coordinator = coordinator
-        self._session_data = session_data
-        self._name = name
-        self._key = key
-        self._attr_unique_id = f"airvpn_session_{device_id}_{key}"
-        self._attr_unit_of_measurement = unit
-        self._attr_icon = icon
-        self._attr_device_class = device_class
-        self._attr_state_class = state_class
-        
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, device_id)},
-        }
+class AirVPNSessionSensor(AirVPNBaseSensor):
+    def __init__(self, coordinator, device_id, device_name, *args, **kwargs):
+        self._device_name = device_name
+        super().__init__(coordinator, device_id, *args, device_name_prefix=f"AirVPN Device ({device_name})", **kwargs)
 
-    @property
-    def name(self):
-        return self._name
-    
-    @property
-    def state(self):
-        """Return the state of the sensor."""
-        return self._session_data.get(self._key)
-
-    async def async_added_to_hass(self):
-        self.async_on_remove(
-            self.coordinator.async_add_listener(self.async_write_ha_state)
-        )
+    def _get_data(self):
+        for session in self.coordinator.data.get("sessions", []):
+            if session.get("device_name") == self._device_name:
+                return session
+        return None
