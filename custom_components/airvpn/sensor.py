@@ -3,7 +3,7 @@ import asyncio
 import aiohttp
 from datetime import timedelta
 from homeassistant.components.sensor import SensorEntity, SensorDeviceClass, SensorStateClass
-from homeassistant.components.binary_sensor import BinarySensorEntity
+from homeassistant.components.binary_sensor import BinarySensorEntity, BinarySensorDeviceClass
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed, CoordinatorEntity
@@ -67,8 +67,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
         ]
         
         user_binary_sensors = [
-            AirVPNUserBinarySensor(coordinator, "Connected", "connected", user_device_id, username, icon="mdi:vpn"),
-            AirVPNUserBinarySensor(coordinator, "Premium", "premium", user_device_id, username, icon="mdi:crown"),
+            AirVPNUserBinarySensor(coordinator, user_device_id, "connected", "Connected", "mdi:vpn", device_class=BinarySensorDeviceClass.CONNECTIVITY),
+            AirVPNUserBinarySensor(coordinator, user_device_id, "premium", "Premium", "mdi:crown"),
         ]
     
     sessions_by_name = {s.get('device_name'): s for s in coordinator.data.get('sessions', [])}
@@ -140,6 +140,17 @@ class AirVPNBaseSensor(AirVPNBaseEntity, SensorEntity):
         data = self._get_data()
         return data.get(self._entity_key) if data else None
 
+class AirVPNBaseBinarySensor(AirVPNBaseEntity, BinarySensorEntity):    
+    def __init__(self, coordinator, device_id, entity_key, name_suffix, icon, device_name_prefix="AirVPN", device_class=None):
+        super().__init__(coordinator, device_id, entity_key, name_suffix, icon, device_name_prefix)
+        self._attr_device_class = device_class
+    
+    @property
+    def is_on(self):
+        """Return true if the binary sensor is on."""
+        data = self._get_data()
+        return bool(data.get(self._entity_key)) if data else False
+
 # -- User Sensors --
 
 class AirVPNUserSensor(AirVPNBaseSensor):
@@ -150,34 +161,13 @@ class AirVPNUserSensor(AirVPNBaseSensor):
     def _get_data(self):
         return self.coordinator.data.get("user")
 
-class AirVPNUserBinarySensor(CoordinatorEntity, BinarySensorEntity):
-    def __init__(self, coordinator, name, key, device_id, device_name, icon=None):
-        super().__init__(coordinator)
-        self._name = name
-        self._key = key
-        self._attr_unique_id = f"airvpn_user_{key}"
-        self._attr_icon = icon
-        
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, device_id)},
-            "name": f"AirVPN User ({device_name})",
-            "manufacturer": "AirVPN",
-        }
+class AirVPNUserBinarySensor(AirVPNBaseBinarySensor):
+    def __init__(self, coordinator, user_id, *args, **kwargs):
+        username = coordinator.data.get("user", {}).get("login", user_id)
+        super().__init__(coordinator, user_id, *args, device_name_prefix=f"AirVPN User ({username})", **kwargs)
 
-    @property
-    def name(self):
-        return f"AirVPN {self._name}"
-
-    @property
-    def is_on(self):
-        """Return true if the binary sensor is on."""
-        user_data = self.coordinator.data.get('user', {})
-        return user_data.get(self._key)
-
-    async def async_added_to_hass(self):
-        self.async_on_remove(
-            self.coordinator.async_add_listener(self.async_write_ha_state)
-        )
+    def _get_data(self):
+        return self.coordinator.data.get("user")
 
 # -- Device Sensors --
 
