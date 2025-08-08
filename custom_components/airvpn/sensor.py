@@ -140,6 +140,7 @@ class AirVPNBaseSensor(AirVPNBaseEntity, SensorEntity):
         data = self._get_data()
         return data.get(self._entity_key) if data else None
 
+# -- User Sensors --
 
 class AirVPNUserSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator, name, key, device_id, device_name, unit=None, icon=None, device_class=None, state_class=None):
@@ -202,6 +203,8 @@ class AirVPNUserBinarySensor(CoordinatorEntity, BinarySensorEntity):
             self.coordinator.async_add_listener(self.async_write_ha_state)
         )
 
+# -- Device Sensors --
+
 class AirVPNDeviceSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator, device_data, name, key, icon, device_id, device_name, unit=None, device_class=None, state_class=None):
         super().__init__(coordinator)
@@ -233,6 +236,8 @@ class AirVPNDeviceSensor(CoordinatorEntity, SensorEntity):
         self.async_on_remove(
             self.coordinator.async_add_listener(self.async_write_ha_state)
         )
+
+# -- Session Sensors --
 
 class AirVPNSessionSensor(AirVPNBaseSensor):
     def __init__(self, coordinator, device_id, device_name, *args, **kwargs):
