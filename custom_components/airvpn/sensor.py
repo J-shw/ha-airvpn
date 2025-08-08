@@ -83,10 +83,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
             continue
 
         device_sensors.extend([
-            AirVPNDeviceSensor(coordinator, device_info, "Status", "status", "mdi:network-outline", device_id, device_name),
-            AirVPNDeviceSensor(coordinator, device_info, "Last Attempt Date", "vpn_attempt_date", "mdi:calendar-check", device_id, device_name),
-            AirVPNDeviceSensor(coordinator, device_info, "VPN Last From", "vpn_last_from_date", "mdi:vpn", device_id, device_name),
-            AirVPNDeviceSensor(coordinator, device_info, "VPN Last To", "vpn_last_to_date", "mdi:vpn", device_id, device_name),
+            AirVPNDeviceSensor(coordinator, device_id, device_name, "status", "Status", None, "mdi:network-outline"),
+            AirVPNDeviceSensor(coordinator, device_id, device_name, "vpn_attempt_date", "Last Attempt Date", None, "mdi:calendar-check"),
+            AirVPNDeviceSensor(coordinator, device_id, device_name, "vpn_last_from_date", "VPN Last From", None, "mdi:vpn"),
+            AirVPNDeviceSensor(coordinator, device_id, device_name, "vpn_last_to_date", "VPN Last To", None, "mdi:vpn"),
         ])
         
         session = sessions_by_name.get(device_name)
@@ -205,37 +205,16 @@ class AirVPNUserBinarySensor(CoordinatorEntity, BinarySensorEntity):
 
 # -- Device Sensors --
 
-class AirVPNDeviceSensor(CoordinatorEntity, SensorEntity):
-    def __init__(self, coordinator, device_data, name, key, icon, device_id, device_name, unit=None, device_class=None, state_class=None):
-        super().__init__(coordinator)
-        self._device_data = device_data
-        self._name = name
-        self._key = key
-        self._attr_unique_id = f"airvpn_device_{device_id}_{key}"
-        self._attr_unit_of_measurement = unit
-        self._attr_icon = icon
-        self._attr_device_class = device_class
-        self._attr_state_class = state_class
+class AirVPNDeviceSensor(AirVPNBaseSensor):
+    def __init__(self, coordinator, device_id, device_name, *args, **kwargs):
+        self._device_id = device_id
+        super().__init__(coordinator, device_id, *args, device_name_prefix=f"AirVPN Device ({device_name})", **kwargs)
         
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, device_id)},
-            "name": f"AirVPN Device ({device_name})",
-            "manufacturer": "AirVPN",
-        }
-
-    @property
-    def name(self):
-        return self._name
-    
-    @property
-    def state(self):
-        """Return the state of the sensor."""
-        return self._device_data.get(self._key)
-
-    async def async_added_to_hass(self):
-        self.async_on_remove(
-            self.coordinator.async_add_listener(self.async_write_ha_state)
-        )
+    def _get_data(self):
+        for device in self.coordinator.data.get("devices", []):
+            if device.get("id") == self._device_id:
+                return device
+        return None
 
 # -- Session Sensors --
 
