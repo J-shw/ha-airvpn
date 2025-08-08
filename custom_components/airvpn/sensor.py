@@ -60,10 +60,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
 
     if user_device_id:
         user_sensors = [
-            AirVPNUserSensor(coordinator, "Expiration Days", "expiration_days", user_device_id, username, "days", "mdi:calendar-end", SensorDeviceClass.DURATION, SensorStateClass.MEASUREMENT),
-            AirVPNUserSensor(coordinator, "Credits", "credits", user_device_id, username, icon="mdi:bitcoin", device_class=SensorDeviceClass.MONETARY, state_class=SensorStateClass.MEASUREMENT),
-            AirVPNUserSensor(coordinator, "Last Activity", "last_activity_date", user_device_id, username, icon="mdi:clock-end"),
-            AirVPNUserSensor(coordinator, "Username", "login", user_device_id, username, icon="mdi:account"),
+            AirVPNUserSensor(coordinator, user_device_id, "expiration_days", "Expiration", "days", "mdi:calendar-end", device_class=SensorDeviceClass.DURATION),
+            AirVPNUserSensor(coordinator, user_device_id, "credits", "Credits", None, "mdi:bitcoin", device_class=SensorDeviceClass.MONETARY),
+            AirVPNUserSensor(coordinator, user_device_id, "last_activity_date", "Last Activity", None, "mdi:clock-end"),
+            AirVPNUserSensor(coordinator, user_device_id, "login", "Username", None, "mdi:account"),
         ]
         
         user_binary_sensors = [
@@ -142,37 +142,13 @@ class AirVPNBaseSensor(AirVPNBaseEntity, SensorEntity):
 
 # -- User Sensors --
 
-class AirVPNUserSensor(CoordinatorEntity, SensorEntity):
-    def __init__(self, coordinator, name, key, device_id, device_name, unit=None, icon=None, device_class=None, state_class=None):
-        super().__init__(coordinator)
-        self._name = name
-        self._key = key
-        self._attr_unique_id = f"airvpn_user_{key}"
-        self._attr_unit_of_measurement = unit
-        self._attr_icon = icon
-        self._attr_device_class = device_class
-        self._attr_state_class = state_class
-
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, device_id)},
-            "name": f"AirVPN User ({device_name})",
-            "manufacturer": "AirVPN",
-        }
-
-    @property
-    def name(self):
-        return f"AirVPN {self._name}"
-    
-    @property
-    def state(self):
-        """Return the state of the sensor."""
-        user_data = self.coordinator.data.get('user', {})
-        return user_data.get(self._key)
-
-    async def async_added_to_hass(self):
-        self.async_on_remove(
-            self.coordinator.async_add_listener(self.async_write_ha_state)
-        )
+class AirVPNUserSensor(AirVPNBaseSensor):
+    def __init__(self, coordinator, user_id, *args, **kwargs):
+        username = coordinator.data.get("user", {}).get("login", user_id)
+        super().__init__(coordinator, user_id, *args, device_name_prefix=f"AirVPN User ({username})", **kwargs)
+        
+    def _get_data(self):
+        return self.coordinator.data.get("user")
 
 class AirVPNUserBinarySensor(CoordinatorEntity, BinarySensorEntity):
     def __init__(self, coordinator, name, key, device_id, device_name, icon=None):
