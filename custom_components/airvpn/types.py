@@ -1,9 +1,9 @@
-from typing import TypedDict, List, Literal
+from typing import TypedDict, List, Literal, Union
 
 # Now I don't actually know all the literals yet... But I am hoping to add them to this as I do.
-VPNAttemptMessage = Literal["OK"]
-VPNStatus = Literal["ready"]
-ResponseResult = Literal["ok"]
+VPNAttemptMessage = Union[Literal["OK"], str]
+VPNStatus = Union[Literal["ready"], str]
+ResponseResult = Union[Literal["ok"], str]
 
 class AirVPNUser(TypedDict):
     login: str
