@@ -34,6 +34,58 @@ class AirVPNUser(TypedDict):
     connected: bool
     """Whether the user is currently connected."""
 
+class AirVPNSession(TypedDict):
+    device_name: str
+    """The name of the device."""
+    device_description: str
+    """The description of the device."""
+    vpn_ip: str
+    """The IP address of the VPN connection."""
+    vpn_ipv4: str
+    """The IPv4 address of the VPN connection."""
+    vpn_ipv6: str
+    """The IPv6 address of the VPN connection."""
+    exit_ip: str
+    """The exit IP address of the VPN connection."""
+    exit_ipv4: str
+    """The exit IPv4 address of the VPN connection."""
+    exit_ipv6: str
+    """The exit IPv6 address of the VPN connection."""
+    entry_ip: str
+    """The entry IP address of the VPN connection."""
+    entry_ipv4: str
+    """The entry IPv4 address of the VPN connection."""
+    entry_ipv6: str
+    """The entry IPv6 address of the VPN connection."""
+    server_name: str
+    """The name of the server."""
+    server_country: str
+    """The country of the server."""
+    server_country_code: str
+    """The country code of the server."""
+    server_continent: str
+    """The continent of the server."""
+    server_location: str
+    """The location of the server."""
+    server_bw: int
+    """The bandwidth of the server."""
+    bytes_read: int
+    """The number of bytes read."""
+    bytes_write: int
+    """The number of bytes written."""
+    connected_since_date: str
+    """The date the user connected."""
+    connected_since_unix: int
+    """The unix timestamp of when the user connected."""
+    speed_read: int
+    """The download speed."""
+    speed_write: int
+    """The upload speed."""
+
 class UserInfoResponse(TypedDict):
     user: AirVPNUser
-    sessions: List[dict]
+    """The user information."""
+    sessions: List[AirVPNSession]
+    """The list of sessions."""
+    connection: dict
+    """Not sure what this is... It seems to shown a single connection even though I have multiple?"""
