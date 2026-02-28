@@ -143,7 +143,7 @@ class UserInfoResponse(TypedDict):
 class DeviceInfoResponse(TypedDict):
     action: str
     """The action taken."""
-    devices: List[dict]
+    devices: List[AirVPNDevice]
     """The list of devices."""
     result: ResponseResult
     """`ok` seems to be the good response."""
