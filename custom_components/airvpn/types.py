@@ -131,6 +131,8 @@ class AirVPNDevice(TypedDict):
 
 
 class UserInfoResponse(TypedDict):
+    """The response from the user info endpoint."""
+
     user: AirVPNUser
     """The user information."""
     sessions: List[AirVPNSession]
@@ -141,9 +143,21 @@ class UserInfoResponse(TypedDict):
     """The result of the request. `ok` seems to be the good response."""
 
 class DeviceInfoResponse(TypedDict):
+    """The response from the device info endpoint."""
+
     action: str
     """The action taken."""
     devices: List[AirVPNDevice]
     """The list of devices."""
     result: ResponseResult
     """`ok` seems to be the good response."""
+
+class AirVPNData(TypedDict):
+    """The final merged data object used by the Coordinator."""
+
+    user: AirVPNUser
+    """The user information."""
+    devices: List[AirVPNDevice]
+    """The list of devices."""
+    sessions: List[AirVPNSession]
+    """The list of sessions."""
