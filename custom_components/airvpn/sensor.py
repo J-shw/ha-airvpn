@@ -29,9 +29,9 @@ async def async_setup_entry(
     # User data
 
     entities.extend([
-        AirVPNUserSensor(coordinator, "expiration_days", "Expiration Days", "mdi:calendar", unit=UnitOfTime.DAYS),
+        AirVPNUserSensor(coordinator, "expiration_days", "Expiration Days", "mdi:calendar-end", unit=UnitOfTime.DAYS),
         AirVPNUserSensor(coordinator, "expiration_date", "Expiration Date", "mdi:calendar"),
-        AirVPNUserSensor(coordinator, "credits", "Credits", "mdi:numeric"),
+        AirVPNUserSensor(coordinator, "credits", "Credits", "mdi:bitcoin"),
         AirVPNUserSensor(coordinator, "last_visit_date", "Last Visit", "mdi:clock-out"),
         AirVPNUserBinarySensor(coordinator, "connected", "Connection Status", "mdi:vpn", BinarySensorDeviceClass.CONNECTIVITY),
         AirVPNUserBinarySensor(coordinator, "premium", "Premium Status", "mdi:crown"),
