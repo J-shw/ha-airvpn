@@ -129,6 +129,55 @@ class AirVPNDevice(TypedDict):
     status: VPNStatus
     """The status of the device."""
 
+class GeoSmall(TypedDict):
+    """The small geo data"""
+    code: str
+    """The country code."""
+    name: str
+    """The country name."""
+
+class GeoAdditional(TypedDict):
+    ts: int
+    """The timestamp of the geo data."""
+    as_number: int
+    """The AS number."""
+    isp_name: str
+    """The ISP name."""
+    country_code: str
+    """The country code."""
+    country_name: str
+    """The country name."""
+    region_code: str
+    """The region code."""
+    region_name: str
+    """The region name."""
+    continent_code: str
+    """The continent code."""
+    continent_name: str
+    """The continent name."""
+    city_name: str
+    """The city name."""
+    postal_code: str | None
+    """The zip code."""
+    postal_confidence: int | None
+    """The confidence of the post code."""
+    latitude: float
+    """The latitude of the location."""
+    longitude: float
+    """The longitude of the location."""
+    accuracy_radius: int
+    """The accuracy of the location."""
+    timezone: str
+    """The timezone of the location."""
+    metro_code: str | None
+    """The metro code."""
+    code: str
+    """The country code again?"""
+    name: str
+    """The country name again?"""
+    notes: str
+    """Just some notes about guarantees"""
+
 
 class UserInfoResponse(TypedDict):
     """The response from the user info endpoint."""
@@ -152,6 +201,25 @@ class DeviceInfoResponse(TypedDict):
     result: ResponseResult
     """`ok` seems to be the good response."""
 
+class WhatsMyIpResponse(TypedDict):
+    """The response from the whatsmyip endpoint."""
+
+    ip: str
+    """The IP address."""
+    ipv4: bool
+    """Whether the IP is IPv4."""
+    ipv6: bool
+    """Whether the IP is IPv6."""
+    airvpn: bool
+    """Whether the IP is from AirVPN."""
+    geo: GeoSmall
+    """Geo info"""
+    geo_additional: GeoAdditional
+    """Additional geo info"""
+    result: ResponseResult
+    """`ok` seems to be the good response."""
+
+
 class AirVPNData(TypedDict):
     """The final merged data object used by the Coordinator."""
 
@@ -161,3 +229,5 @@ class AirVPNData(TypedDict):
     """The list of devices."""
     sessions: List[AirVPNSession]
     """The list of sessions."""
+    ip_data: WhatsMyIpResponse
+    """The IP data."""

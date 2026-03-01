@@ -28,9 +28,10 @@ class AirVPNUpdateCoordinator(DataUpdateCoordinator[AirVPNData]):
     async def _async_update_data(self) -> AirVPNData:
         """Update data via API."""
         try:
-            user_info, device_info = await asyncio.gather(
+            user_info, device_info, ip_info = await asyncio.gather(
                 self.api.get_user_info(),
-                self.api.get_devices()
+                self.api.get_devices(),
+                self.api.get_ip_data()
             )
 
             if user_info.get("result") != "ok":
@@ -38,11 +39,15 @@ class AirVPNUpdateCoordinator(DataUpdateCoordinator[AirVPNData]):
             
             if device_info.get("result") != "ok":
                 raise UpdateFailed(f"Device API error: {device_info.get('result')}")
+            
+            if ip_info.get("result") != "ok":
+                raise UpdateFailed(f"IP API error: {ip_info.get('result')}")
 
             return {
                 "user": user_info["user"],
                 "sessions": user_info.get("sessions", []),
                 "devices": device_info.get("devices", []),
+                "ip_data": ip_info
             }
         except Exception as err:
             raise UpdateFailed(f"Error communicating with API: {err}")
