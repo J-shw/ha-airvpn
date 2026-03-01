@@ -15,7 +15,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     api_key = entry.data[CONF_API_KEY]
     session = async_get_clientsession(hass)
     api = AirVPNApi(api_key, session)
-    coordinator = AirVPNUpdateCoordinator(hass, api)
+    coordinator = AirVPNUpdateCoordinator(hass, api, entry)
+
+    entry.async_on_unload(entry.add_update_listener(update_listener))
 
     await coordinator.async_config_entry_first_refresh()
 
@@ -32,3 +34,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
+
+async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
+    """Handle options update."""
+    await hass.config_entries.async_reload(entry.entry_id)
