@@ -31,7 +31,9 @@ async def async_setup_entry(
 
     entities.extend([
         AirVPNUserSensor(coordinator, "expiration_days", "Expiration Days", "mdi:calendar", unit=UnitOfTime.DAYS),
+        AirVPNUserSensor(coordinator, "expiration_date", "Expiration Date", "mdi:calendar"),
         AirVPNUserSensor(coordinator, "credits", "Credits", "mdi:numeric"),
+        AirVPNUserSensor(coordinator, "last_visit_date", "Last Visit", "mdi:clock-out"),
         AirVPNUserBinarySensor(coordinator, "connected", "Connection Status", "mdi:vpn", BinarySensorDeviceClass.CONNECTIVITY),
         AirVPNUserBinarySensor(coordinator, "premium", "Premium Status", "mdi:crown"),
     ])
@@ -45,6 +47,8 @@ async def async_setup_entry(
             AirVPNDeviceSensor(coordinator, d_id, d_name, "status", "Status", "mdi:list-status"),
             AirVPNDeviceSensor(coordinator, d_id, d_name, "vpn_attempt_message", "Last Attempt Message", "mdi:message-text-outline"),
             AirVPNDeviceSensor(coordinator, d_id, d_name, "vpn_last_from_date", "Last Connected", "mdi:clock-out"),
+            AirVPNDeviceSensor(coordinator, d_id, d_name, "vpn_last_to_date", "Last Disconnected", "mdi:clock-out"),
+            AirVPNDeviceSensor(coordinator, d_id, d_name, "renew_counter", "Renew Counter", "mdi:repeat"),
         ])
 
     for session in coordinator.data.get("sessions", []):
@@ -54,7 +58,17 @@ async def async_setup_entry(
 
         entities.extend([
             AirVPNSessionSensor(coordinator, d_id, s_name, "server_name", "Connected Server", "mdi:server"),
+            AirVPNSessionSensor(coordinator, d_id, s_name, "server_continent", "Server Continent", "mdi:map"),
+            AirVPNSessionSensor(coordinator, d_id, s_name, "server_location", "Server Location", "mdi:map"),
+            AirVPNSessionSensor(coordinator, d_id, s_name, "server_country", "Server Country", "mdi:map"),
+            AirVPNSessionSensor(coordinator, d_id, s_name, "server_bw", "Server Bandwidth", "mdi:download", unit=UnitOfDataRate.MEGABYTES_PER_SECOND, device_class=SensorDeviceClass.DATA_RATE, state_class=SensorStateClass.MEASUREMENT),
+            
+            # IP Addresses
+            AirVPNSessionSensor(coordinator, d_id, s_name, "vpn_ip", "VPN IP", "mdi:ip-network"),
+            AirVPNSessionSensor(coordinator, d_id, s_name, "entry_ip", "Entry IP", "mdi:ip-network"),
             AirVPNSessionSensor(coordinator, d_id, s_name, "exit_ip", "Exit IP", "mdi:ip-network"),
+
+            AirVPNSessionSensor(coordinator, d_id, s_name, "connected_since_date", "Connected Since", "mdi:clock"),
             
             # Data Rates
             AirVPNSessionSensor(coordinator, d_id, s_name, "speed_read", "Download Speed", "mdi:download", unit=UnitOfDataRate.BYTES_PER_SECOND, device_class=SensorDeviceClass.DATA_RATE, state_class=SensorStateClass.MEASUREMENT),
