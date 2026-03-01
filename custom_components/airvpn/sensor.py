@@ -26,6 +26,18 @@ async def async_setup_entry(
 
     entities = []
 
+    # HA Host Connection Info
+    ha_group_id = "ha_connection_info"
+    ha_group_name = "AirVPN Home Assistant"
+
+    entities.extend([
+        AirVPNIPBinarySensor(coordinator, "airvpn", "VPN Protection", ha_group_id, ha_group_name, device_class=BinarySensorDeviceClass.SAFETY),
+        AirVPNIPBinarySensor(coordinator, "ipv4", "IPv4 Protocol", ha_group_id, ha_group_name, device_class=BinarySensorDeviceClass.CONNECTIVITY, icon="mdi:ip-network"),
+        AirVPNIPBinarySensor(coordinator, "ipv6", "IPv6 Protocol", ha_group_id, ha_group_name, device_class=BinarySensorDeviceClass.CONNECTIVITY, icon="mdi:ip-network-outline"),
+        AirVPNIPSensor(coordinator, "ip", "Public IP", "mdi:ip", ha_group_id, ha_group_name),
+        AirVPNIPSensor(coordinator, "isp_name", "ISP", "mdi:server", ha_group_id, ha_group_name, is_geo=True),
+    ])
+
     # User data
 
     entities.extend([
@@ -167,3 +179,44 @@ class AirVPNSessionSensor(AirVPNEntity, SensorEntity):
     def native_value(self):
         session = next((s for s in self.coordinator.data["sessions"] if s["device_name"] == self._device_name), None)
         return session.get(self._key) if session else None
+
+# -- IP Entities --
+
+class AirVPNIPSensor(AirVPNEntity, SensorEntity):
+    """Sensor for the host's current IP status."""
+    def __init__(self, coordinator, key, name, icon, device_id, device_name, is_geo=False):
+        super().__init__(coordinator, f"ha_host_{key}", name, device_id, device_name, icon)
+        self._key = key
+        self._is_geo = is_geo
+
+    @property
+    def native_value(self):
+        data = self.coordinator.data["ip_data"]
+        if self._is_geo:
+            return data.get("geo_additional", {}).get(self._key)
+        return data.get(self._key)
+
+class AirVPNIPBinarySensor(AirVPNEntity, BinarySensorEntity):
+    """Binary sensor for IP and Security data."""
+    def __init__(
+        self, 
+        coordinator, 
+        key, 
+        name, 
+        device_id, 
+        device_name, 
+        device_class=None, 
+        icon=None, 
+        is_geo=False
+    ):
+        super().__init__(coordinator, f"ha_host_bin_{key}", name, device_id, device_name, icon)
+        self._key = key
+        self._is_geo = is_geo
+        self._attr_device_class = device_class
+
+    @property
+    def is_on(self) -> bool:
+        data = self.coordinator.data["ip_data"]
+        if self._is_geo:
+            return bool(data.get("geo_additional", {}).get(self._key, False))
+        return bool(data.get(self._key, False))
