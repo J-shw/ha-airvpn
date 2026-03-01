@@ -1,199 +1,156 @@
 import logging
-import asyncio
-import aiohttp
-from datetime import timedelta
 from homeassistant.components.sensor import SensorEntity, SensorDeviceClass, SensorStateClass
 from homeassistant.components.binary_sensor import BinarySensorEntity, BinarySensorDeviceClass
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed, CoordinatorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.const import (
+    UnitOfInformation,
+    UnitOfDataRate,
+    UnitOfTime,
+)
 
-from .const import DOMAIN, CONF_API_KEY
+from .const import DOMAIN
+from .coordinator import AirVPNUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-SCAN_INTERVAL = timedelta(seconds=300)
+async def async_setup_entry(
+    hass: HomeAssistant, 
+    entry: ConfigEntry, 
+    async_add_entities: AddEntitiesCallback
+) -> None:
+    """Set up AirVPN sensors."""
+    coordinator: AirVPNUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
 
-async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, async_add_entities):
+    user = coordinator.data["user"]
+    entities = []
 
-    api_key = hass.data[DOMAIN][CONF_API_KEY]
+    # User data
 
-    api_endpoint_userinfo  = f"https://airvpn.org/api/userinfo/?key={api_key}"
-    api_endpoint_devices = f"https://airvpn.org/api/devices/?key={api_key}"
-    
-    async def async_update_data():
-        try:
-            async with aiohttp.ClientSession() as session:
-                userinfo_response = await session.get(api_endpoint_userinfo)
-                devices_response = await session.get(api_endpoint_devices)
+    entities.extend([
+        AirVPNUserSensor(coordinator, "expiration_days", "Expiration Days", "mdi:calendar", unit=UnitOfTime.DAYS),
+        AirVPNUserSensor(coordinator, "credits", "Credits", "mdi:numeric"),
+        AirVPNUserBinarySensor(coordinator, "connected", "Connection Status", "mdi:vpn", BinarySensorDeviceClass.CONNECTIVITY),
+        AirVPNUserBinarySensor(coordinator, "premium", "Premium Status", "mdi:crown"),
+    ])
 
-                userinfo_response.raise_for_status()
-                devices_response.raise_for_status()
+    # Device data
 
-                userinfo_data = await userinfo_response.json()
-                devices_data = await devices_response.json()
-                
-                data = userinfo_data
-                data["devices"] = devices_data["devices"] if "devices" in devices_data and devices_data["devices"] else []
-                return data
-        except Exception as err:
-            raise UpdateFailed(f"Error fetching data: {err}")
-
-    coordinator = DataUpdateCoordinator(
-        hass,
-        _LOGGER,
-        name="airvpn_coordinator",
-        update_method=async_update_data,
-        update_interval=SCAN_INTERVAL,
-    )
-    
-    await coordinator.async_refresh()
-
-    user_data = coordinator.data.get('user', {})
-    username = user_data.get('login')
-    user_device_id = username.lower() if username else None
-
-    user_sensors = []
-    user_binary_sensors = []
-
-    if user_device_id:
-        user_sensors = [
-            AirVPNUserSensor(coordinator, user_device_id, "expiration_days", "Expiration", "days", "mdi:calendar-end", device_class=SensorDeviceClass.DURATION),
-            AirVPNUserSensor(coordinator, user_device_id, "credits", "Credits", None, "mdi:bitcoin", device_class=SensorDeviceClass.MONETARY),
-            AirVPNUserSensor(coordinator, user_device_id, "last_activity_date", "Last Activity", None, "mdi:clock-end"),
-            AirVPNUserSensor(coordinator, user_device_id, "login", "Username", None, "mdi:account"),
-        ]
+    for device in coordinator.data.get("devices", []):
+        d_id, d_name = device["id"], device["name"]
         
-        user_binary_sensors = [
-            AirVPNUserBinarySensor(coordinator, user_device_id, "connected", "Connected", "mdi:vpn", device_class=BinarySensorDeviceClass.CONNECTIVITY),
-            AirVPNUserBinarySensor(coordinator, user_device_id, "premium", "Premium", "mdi:crown"),
-        ]
-    
-    sessions_by_name = {s.get('device_name'): s for s in coordinator.data.get('sessions', [])}
-
-    session_sensors = []
-    device_sensors = []
-    for device_info in coordinator.data.get('devices', []):
-        device_id = device_info.get('id')
-        device_name = device_info.get('name')
-        
-        if not device_id or not device_name:
-            continue
-
-        device_sensors.extend([
-            AirVPNDeviceSensor(coordinator, device_id, device_name, "status", "Status", None, "mdi:network-outline"),
-            AirVPNDeviceSensor(coordinator, device_id, device_name, "vpn_attempt_date", "Last Attempt Date", None, "mdi:calendar-check"),
-            AirVPNDeviceSensor(coordinator, device_id, device_name, "vpn_last_from_date", "VPN Last From", None, "mdi:vpn"),
-            AirVPNDeviceSensor(coordinator, device_id, device_name, "vpn_last_to_date", "VPN Last To", None, "mdi:vpn"),
+        entities.extend([
+            AirVPNDeviceSensor(coordinator, d_id, d_name, "status", "Status", "mdi:list-status"),
+            AirVPNDeviceSensor(coordinator, d_id, d_name, "vpn_attempt_message", "Last Attempt Message", "mdi:message-text-outline"),
+            AirVPNDeviceSensor(coordinator, d_id, d_name, "vpn_last_from_date", "Last Connected", "mdi:clock-out"),
         ])
-        
-        session = sessions_by_name.get(device_name)
-        if session:
-            session_sensors.extend([
-                AirVPNSessionSensor(coordinator, device_id, device_name, "server_name", "Server Name", None, "mdi:server-network"),
-                AirVPNSessionSensor(coordinator, device_id, device_name, "vpn_ip", "VPN IP", None, "mdi:ip-network"),
-                AirVPNSessionSensor(coordinator, device_id, device_name, "entry_ip", "Entry IP", None, "mdi:ip-network-outline"),
-                AirVPNSessionSensor(coordinator, device_id, device_name, "exit_ip", "Exit IP", None, "mdi:ip-network-outline"),
-                AirVPNSessionSensor(coordinator, device_id, device_name, "server_country", "Server Country", None, "mdi:earth"),
-                AirVPNSessionSensor(coordinator, device_id, device_name, "connected_since_date", "Connected Since", None, "mdi:clock-start"),
-                AirVPNSessionSensor(coordinator, device_id, device_name, "bytes_read", "Data Downloaded", "bytes", "mdi:download", device_class=SensorDeviceClass.DATA_SIZE, state_class=SensorStateClass.TOTAL_INCREASING),
-                AirVPNSessionSensor(coordinator, device_id, device_name, "bytes_write", "Data Uploaded", "bytes", "mdi:upload", device_class=SensorDeviceClass.DATA_SIZE, state_class=SensorStateClass.TOTAL_INCREASING),
-                AirVPNSessionSensor(coordinator, device_id, device_name, "speed_read", "Download Speed", "B/s", "mdi:download-network", device_class=SensorDeviceClass.DATA_RATE, state_class=SensorStateClass.MEASUREMENT),
-                AirVPNSessionSensor(coordinator, device_id, device_name, "speed_write", "Upload Speed", "B/s", "mdi:upload-network", device_class=SensorDeviceClass.DATA_RATE, state_class=SensorStateClass.MEASUREMENT),
-                AirVPNSessionSensor(coordinator, device_id, device_name, "server_bw", "Server Bandwidth", "Mbit/s", "mdi:chart-bell-curve", device_class=SensorDeviceClass.DATA_RATE, state_class=SensorStateClass.MEASUREMENT),
-            ])
 
-    async_add_entities(user_sensors, True)
-    async_add_entities(user_binary_sensors, True)
-    async_add_entities(device_sensors, True)
-    async_add_entities(session_sensors, True)
+    for session in coordinator.data.get("sessions", []):
+        s_name = session["device_name"]
+        # Find ID to group with the Device Registry entry
+        d_id = next((d["id"] for d in coordinator.data["devices"] if d["name"] == s_name), s_name)
 
-# -- Base classes --
+        entities.extend([
+            AirVPNSessionSensor(coordinator, d_id, s_name, "server_name", "Connected Server", "mdi:server"),
+            AirVPNSessionSensor(coordinator, d_id, s_name, "exit_ip", "Exit IP", "mdi:ip-network"),
+            
+            # Data Rates
+            AirVPNSessionSensor(coordinator, d_id, s_name, "speed_read", "Download Speed", "mdi:download", unit=UnitOfDataRate.BYTES_PER_SECOND, device_class=SensorDeviceClass.DATA_RATE, state_class=SensorStateClass.MEASUREMENT),
+            AirVPNSessionSensor(coordinator, d_id, s_name, "speed_write", "Upload Speed", "mdi:upload", unit=UnitOfDataRate.BYTES_PER_SECOND, device_class=SensorDeviceClass.DATA_RATE, state_class=SensorStateClass.MEASUREMENT),
+            
+            # Data Totals
+            AirVPNSessionSensor(coordinator, d_id, s_name, "bytes_read", "Total Downloaded", "mdi:download-outline", unit=UnitOfInformation.BYTES, device_class=SensorDeviceClass.DATA_SIZE, state_class=SensorStateClass.TOTAL_INCREASING),
+            AirVPNSessionSensor(coordinator, d_id, s_name, "bytes_write", "Total Uploaded", "mdi:upload-outline", unit=UnitOfInformation.BYTES, device_class=SensorDeviceClass.DATA_SIZE, state_class=SensorStateClass.TOTAL_INCREASING),
+        ])
 
-class AirVPNBaseEntity(CoordinatorEntity):
-    def __init__(self, coordinator, device_id, entity_key, name_suffix, icon, device_name_prefix):
+    async_add_entities(entities)
+
+# -- Base Class --
+
+class AirVPNEntity(CoordinatorEntity[AirVPNUpdateCoordinator]):
+    """Base class for all AirVPN entities."""
+    _attr_has_entity_name = True
+
+    def __init__(self, coordinator, unique_id, name, device_id, device_name, icon=None):
         super().__init__(coordinator)
-        
-        self._entity_key = entity_key
-
-        self._attr_unique_id = f"{device_id}_{entity_key}"
-        self._attr_name = f"{device_name_prefix} {name_suffix}"
+        self._attr_unique_id = f"{DOMAIN}_{unique_id}"
+        self._attr_name = name
         self._attr_icon = icon
-        
         self._attr_device_info = {
             "identifiers": {(DOMAIN, device_id)},
-            "name": device_name_prefix,
+            "name": device_name,
             "manufacturer": "AirVPN",
         }
+# -- User Entities --
 
-class AirVPNBaseSensor(AirVPNBaseEntity, SensorEntity):    
-    def __init__(self, coordinator, device_id, entity_key, name_suffix, unit, icon, device_name_prefix="AirVPN", **kwargs):
-        super().__init__(coordinator, device_id, entity_key, name_suffix, icon, device_name_prefix)
-        self._attr_native_unit_of_measurement = unit 
-        self._attr_device_class = kwargs.get("device_class")
-        self._attr_state_class = kwargs.get("state_class")
-        
-    @property
-    def state(self):
-        data = self._get_data()
-        return data.get(self._entity_key) if data else None
-
-class AirVPNBaseBinarySensor(AirVPNBaseEntity, BinarySensorEntity):    
-    def __init__(self, coordinator, device_id, entity_key, name_suffix, icon, device_name_prefix="AirVPN", device_class=None):
-        super().__init__(coordinator, device_id, entity_key, name_suffix, icon, device_name_prefix)
+class AirVPNUserSensor(AirVPNEntity, SensorEntity):
+    """Sensor for User account data."""
+    def __init__(self, coordinator, key, name, icon, unit=None, device_class=None, state_class=None):
+        login = coordinator.data["user"]["login"]
+        super().__init__(coordinator, f"user_{login}_{key}", name, f"user_{login}", f"AirVPN ({login})", icon)
+        self._key = key
+        self._attr_native_unit_of_measurement = unit
         self._attr_device_class = device_class
-    
+        self._attr_state_class = state_class
+
     @property
-    def is_on(self):
-        """Return true if the binary sensor is on."""
-        data = self._get_data()
-        return bool(data.get(self._entity_key)) if data else False
+    def native_value(self):
+        return self.coordinator.data["user"].get(self._key)
 
-# -- User Sensors --
+class AirVPNUserBinarySensor(AirVPNEntity, BinarySensorEntity):
+    """Binary Sensor for User account states (Connected, Premium)."""
+    def __init__(self, coordinator, key, name, icon, device_class=None):
+        login = coordinator.data["user"]["login"]
+        super().__init__(coordinator, f"user_{login}_{key}", name, f"user_{login}", f"AirVPN ({login})", icon)
+        self._key = key
+        self._attr_device_class = device_class
 
-class AirVPNUserSensor(AirVPNBaseSensor):
-    def __init__(self, coordinator, user_id, *args, **kwargs):
-        username = coordinator.data.get("user", {}).get("login", user_id)
-        super().__init__(coordinator, user_id, *args, device_name_prefix=f"AirVPN User ({username})", **kwargs)
-        
-    def _get_data(self):
-        return self.coordinator.data.get("user")
+    @property
+    def is_on(self) -> bool:
+        return bool(self.coordinator.data["user"].get(self._key))
 
-class AirVPNUserBinarySensor(AirVPNBaseBinarySensor):
-    def __init__(self, coordinator, user_id, *args, **kwargs):
-        username = coordinator.data.get("user", {}).get("login", user_id)
-        super().__init__(coordinator, user_id, *args, device_name_prefix=f"AirVPN User ({username})", **kwargs)
+# -- Device Entities --
 
-    def _get_data(self):
-        return self.coordinator.data.get("user")
-
-# -- Device Sensors --
-
-class AirVPNDeviceSensor(AirVPNBaseSensor):
-    def __init__(self, coordinator, device_id, device_name, entity_key, name_suffix, unit, icon, **kwargs):
+class AirVPNDeviceSensor(AirVPNEntity, SensorEntity):
+    """Sensor for static Device data (Status, Last Attempt)."""
+    def __init__(self, coordinator, device_id, device_name, key, name, icon, unit=None, device_class=None):
+        super().__init__(coordinator, f"dev_{device_id}_{key}", name, device_id, f"Device: {device_name}", icon)
         self._device_id = device_id
-        super().__init__(coordinator, device_id, entity_key, name_suffix, unit, icon,
-                         device_name_prefix=f"AirVPN Device ({device_name})", **kwargs)
+        self._key = key
+        self._attr_native_unit_of_measurement = unit
+        self._attr_device_class = device_class
 
-    def _get_data(self):
-        for device in self.coordinator.data.get("devices", []):
-            if device.get("id") == self._device_id:
-                return device
-        return None
+    @property
+    def native_value(self):
+        device = next((d for d in self.coordinator.data["devices"] if d["id"] == self._device_id), None)
+        return device.get(self._key) if device else None
 
+# -- Session Entities --
 
-# -- Session Sensors --
-
-class AirVPNSessionSensor(AirVPNBaseSensor):
-    def __init__(self, coordinator, device_id, device_name, entity_key, name_suffix, unit, icon, **kwargs):
+class AirVPNSessionSensor(AirVPNEntity, SensorEntity):
+    """Sensor for live Session data (Speed, IP, Server)."""
+    def __init__(
+        self, 
+        coordinator: AirVPNUpdateCoordinator, 
+        device_id: str, 
+        device_name: str, 
+        key: str, 
+        name: str, 
+        icon: str,
+        unit: str | None = None,
+        device_class: SensorDeviceClass | None = None,
+        state_class: SensorStateClass | None = None
+    ) -> None:
+        super().__init__(coordinator, f"sess_{device_name}_{key}", name, device_id, f"Device: {device_name}", icon)
         self._device_name = device_name
-        super().__init__(coordinator, device_id, entity_key, name_suffix, unit, icon,
-                         device_name_prefix=f"AirVPN Device ({device_name})", **kwargs)
+        self._key = key
+        self._attr_native_unit_of_measurement = unit
+        self._attr_device_class = device_class
+        self._attr_state_class = state_class
 
-    def _get_data(self):
-        for session in self.coordinator.data.get("sessions", []):
-            if session.get("device_name") == self._device_name:
-                return session
-        return None
+    @property
+    def native_value(self):
+        session = next((s for s in self.coordinator.data["sessions"] if s["device_name"] == self._device_name), None)
+        return session.get(self._key) if session else None
