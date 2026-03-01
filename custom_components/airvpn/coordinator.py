@@ -6,7 +6,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import AirVPNApi
-from .types import AirVPNData, UserInfoResponse, DeviceInfoResponse
+from .types import AirVPNData
 
 _LOGGER = logging.getLogger(__name__)
 
