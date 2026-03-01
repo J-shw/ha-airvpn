@@ -1,7 +1,7 @@
 import asyncio
 from typing import Any
 import aiohttp
-from .types import UserInfoResponse, DeviceInfoResponse
+from .types import UserInfoResponse, DeviceInfoResponse, WhatsMyIpResponse
 
 class AirVPNApi:
     """Client to interact with the AirVPN API."""
@@ -30,3 +30,7 @@ class AirVPNApi:
     async def get_devices(self) -> DeviceInfoResponse:
         """Get registered devices data."""
         return await self._get_request("devices")
+    
+    async def get_ip_data(self) -> WhatsMyIpResponse:
+        """Get IP data."""
+        return await self._get_request("whatismyip")
